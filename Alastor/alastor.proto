@@ -1,0 +1,125 @@
+/*
+ *  ALASTOR Mass Connection File Transfer System
+ *  Revision 2.00 edited 2024-05-28
+ *  Copyright (C) 2024 Dariel Valdano
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU Affero General Public License as published
+ *  by the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU Affero General Public License for more details.
+ *
+ *  You should have received a copy of the GNU Affero General Public License
+ *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+syntax = "proto3"; // https://developers.google.com/protocol-buffers/docs/proto3
+
+option go_package = "net/dalva/GvawSkinSync/alastor";
+option java_multiple_files = true;
+option java_package = "net.dalva.alastor.grpc";
+option java_outer_classname = "AlastorProto";
+option objc_class_prefix = "DALS";
+
+package alastor;
+
+
+/**
+ * Alastor Parallel File Transfer System
+ */
+service Alastor {
+
+  // Send arbitrary command
+  rpc Command (CommandQuery) returns (CommandReply) {}
+
+  // Get file or directory info
+  rpc GetFileInfo (FileQuery) returns (FileInfo) {}
+
+  // Get file content by chunks
+  rpc GetFileData (DataQuery) returns (FileData) {}
+}
+
+/**
+ * Command Query
+ */
+message CommandQuery {
+  string api_key = 1; // Arbitrary length API key for client authentication
+  string command = 2; // Filename of the requested file
+}
+
+/**
+ * Command Response
+ */
+message CommandReply {
+  ErrorMsg error = 1; // Error information
+  repeated string return_string = 2; //return in String format
+  repeated int32 return_int32 = 3; //return in int32 format
+}
+
+/**
+ * File Information Request
+ */
+message FileQuery {
+  string api_key = 1; // Arbitrary length API key for client authentication
+  string requested_filename = 2; // Filename of the requested file
+}
+
+/**
+ * File Information Reply
+ */
+message FileInfo {
+  ErrorMsg error = 1; // Error information
+  reserved 2,3,4; // deprecated: File Name, File Size in Bytes, Unix Time
+  bool is_directory = 5; // True if directory, then info below will contain the contents.
+  repeated File info = 6 ; // The single file info, or directory contents.
+}
+
+/**
+ * File Information
+ */
+message File {
+  string file_name = 1; // File Name
+  int64 file_size = 2; // File Size in Bytes. -1 for Folder.
+  int64 file_timestamp = 3; // Last Modified in Unix time - miliseconds since epoch
+}
+
+/**
+ * File Data Request
+ */
+message DataQuery {
+  string api_key = 1; // Arbitrary length API key for client authentication
+  string requested_filename = 2; // Filename of the requested file
+  int32 chunk_size = 3; // Client's chunk size setting in Bytes
+  int64 chunk_offset = 4; // Requested chunk offset from 0 in Bytes
+}
+
+/**
+ * File Data Chunk Reply
+ */
+message FileData {
+  ErrorMsg error = 1; // Error information
+  reserved 2; // File Name - unused
+  bytes chunk_data = 3; // Data chunk
+  uint32 chunk_crc32 = 4; // CRC32 of the checksum in raw uint32
+}
+
+/**
+ * Error message
+ */
+message ErrorMsg {
+  /**
+  * Error Code:
+  * 0 success
+  * 1 General Error
+  * 2 Unauthenticated
+  * 10 general IO error
+  * 11 file not found
+  * 12 requested chunk beyond file size
+  */
+  int32 code = 1; // 0 = success
+  string msg = 2; // Arbitrary error message, human readable, for logging
+}

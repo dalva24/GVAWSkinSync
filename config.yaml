@@ -1,0 +1,7 @@
+db-host: http://localhost
+db-port: "5432"
+db-name: DbName
+db-user: DbUser
+db-pass: ""
+db-timezone: Asia/Jakarta
+port: 24003

@@ -1,0 +1,24 @@
+.DS_Store
+node_modules
+/dist
+/vendor/
+/bin/
+
+# Editor directories and files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+config.yml
+.secrets
+/conf/config.yaml
+/examples/
+
+/server-data/
+/server-data-gold/
+
+*.pb.go
