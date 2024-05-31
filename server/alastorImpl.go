@@ -69,6 +69,9 @@ func fileDataError(code int, err error) *alastor.FileData {
 }
 
 func (s *server) GetFileInfo(ctx context.Context, fq *alastor.FileQuery) (*alastor.FileInfo, error) {
+	if checkIsIpBlocked(ctx) {
+		return nil, status.Error(codes.PermissionDenied, "IP Blocked")
+	}
 	if fq.ApiKey == "" || !strings.EqualFold(fq.ApiKey, authCode) {
 		return nil, status.Error(codes.Unauthenticated, "Invalid Auth Key")
 	}
@@ -133,6 +136,9 @@ func (s *server) GetFileInfo(ctx context.Context, fq *alastor.FileQuery) (*alast
 }
 
 func (s *server) GetFileData(ctx context.Context, dq *alastor.DataQuery) (*alastor.FileData, error) {
+	if checkIsIpBlocked(ctx) {
+		return nil, status.Error(codes.PermissionDenied, "IP Blocked")
+	}
 	if dq.ApiKey == "" || !strings.EqualFold(dq.ApiKey, authCode) {
 		return nil, status.Error(codes.Unauthenticated, "Invalid Auth Key")
 	}
@@ -155,13 +161,19 @@ func (s *server) GetFileData(ctx context.Context, dq *alastor.DataQuery) (*alast
 }
 
 func (s *server) Command(ctx context.Context, cq *alastor.CommandQuery) (*alastor.CommandReply, error) {
+	if checkIsIpBlocked(ctx) {
+		return nil, status.Error(codes.PermissionDenied, "IP Blocked")
+	}
 	p, _ := peer.FromContext(ctx)
 	logger.Log.Info().
 		Str("apiKey", cq.ApiKey).
 		Str("IP", p.Addr.String()).
 		Msg("New Connection")
 	if cq.ApiKey == "" || !strings.EqualFold(cq.ApiKey, authCode) {
+		addIpFail(p.Addr.String())
 		return nil, status.Error(codes.Unauthenticated, "Invalid Auth Key")
+	} else {
+		resetIpBlock(p.Addr.String())
 	}
 
 	if cq.Command == "aircraft" {
@@ -178,4 +190,9 @@ func (s *server) Command(ctx context.Context, cq *alastor.CommandQuery) (*alasto
 		ReturnString: nil,
 		ReturnInt32:  nil,
 	}, nil
+}
+
+func checkIsIpBlocked(ctx context.Context) bool {
+	p, _ := peer.FromContext(ctx)
+	return isIpBlocked(p.Addr.String())
 }

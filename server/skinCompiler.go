@@ -17,11 +17,13 @@ func relPathDir(path string) string {
 }
 
 var (
-	dirComp = "compiled"
-	dirBase = data.Mixdir("base")
-	dirPers = data.Mixdir("personal")
-	resFull = data.Mixdir("full")
-	resHalf = data.Mixdir("half")
+	dirComp  = data.Mixdir("compiled")
+	dirBase  = data.Mixdir("base")
+	dirPers  = data.Mixdir("personal")
+	resFull  = data.Mixdir("full")
+	resHalf  = data.Mixdir("half")
+	enabled  = data.Mixdir("on")
+	disabled = data.Mixdir("off")
 )
 
 func sanityCheck() {
@@ -75,10 +77,10 @@ func updateSkins() {
 	}
 }
 
-func compileSkins() {
+func compileSkins(enabled data.Mixdir) {
 	sanityCheck()
 
-	err := fs.RemoveAll(dirComp)
+	err := fs.RemoveAll(dirComp.Add(enabled))
 	if err != nil {
 		logger.Log.Err(err).Msg("Failed to remove old files")
 	}
@@ -93,72 +95,50 @@ func compileSkins() {
 			//todo check if base skin allows customization
 			for _, pSkin := range personalSkins {
 
-				//prepare folder
-				compPersDir := dirComp + "/" + acft + "/" + bSkin.Name.AddPers(pSkin.Name)
-				logger.Log.Trace().Str("personal", compPersDir).Msg("Creating Skin")
-				err := fs.MkdirAll(compPersDir, 0777)
-				if err != nil {
-					logger.Log.Error().Str("name", string(pSkin.Name)).Err(err).Msg("Error creating directory")
-				}
+				name := string(bSkin.Name)
 
-				//prepare desc.lua
-				compPersDesc, err := fs.Create(compPersDir + "/description.lua")
-				if err != nil {
-					logger.Log.Error().Str("name", string(pSkin.Name)).Err(err).Msg("Error creating description.lua")
-				}
+				if strings.HasPrefix(name, "[GVAW] ") {
+					newName := data.Mixdir(name[7:])
+					//prepare folder
+					compPersDir := dirComp.Add(enabled) + "/" + acft + "/" + newName.AddPers(pSkin.Name)
+					logger.Log.Trace().Str("personal", compPersDir).Msg("Creating Skin")
+					err := fs.MkdirAll(compPersDir, 0777)
+					if err != nil {
+						logger.Log.Error().Str("name", string(pSkin.Name)).Err(err).Msg("Error creating directory")
+					}
 
-				//copy contents from base' desc.lua
-				base, err := fs.Open(bSkin.FullDirName + "/description.lua")
-				if err != nil {
-					logger.Log.Error().Str("name", string(pSkin.Name)).Err(err).Msg("Error copying description.lua")
-				}
-				copyContents(base, compPersDesc, string(bSkin.Name))
-				base.Close()
+					//prepare desc.lua
+					compPersDesc, err := fs.Create(compPersDir + "/description.lua")
+					if err != nil {
+						logger.Log.Error().Str("name", string(pSkin.Name)).Err(err).Msg("Error creating description.lua")
+					}
 
-				//add additional lines from personal skins
-				pers, err := fs.Open(pSkin.FullDirName + "/description.lua")
-				if err != nil {
-					logger.Log.Error().Str("name", string(pSkin.Name)).Err(err).Msg("Error merging description.lua")
-				}
-				appendLuaContents(pers, compPersDesc, "personal/"+string(pSkin.Name))
-				pers.Close()
+					//copy contents from base' desc.lua
+					base, err := fs.Open(bSkin.FullDirName + "/description.lua")
+					if err != nil {
+						logger.Log.Error().Str("name", string(pSkin.Name)).Err(err).Msg("Error copying description.lua")
+					}
+					copyContents(base, compPersDesc, string(bSkin.Name))
+					base.Close()
 
-				err = compPersDesc.Close()
-				if err != nil {
-					logger.Log.Error().Str("name", string(pSkin.Name)).Err(err).Msg("Error saving description.lua")
-				}
+					if enabled == "on" {
+						//add additional lines from personal skins
+						pers, err := fs.Open(pSkin.FullDirName + "/description.lua")
+						if err != nil {
+							logger.Log.Error().Str("name", string(pSkin.Name)).Err(err).Msg("Error merging description.lua")
+						}
+						appendLuaContents(pers, compPersDesc, "personal/"+string(pSkin.Name))
+						pers.Close()
 
+						err = compPersDesc.Close()
+						if err != nil {
+							logger.Log.Error().Str("name", string(pSkin.Name)).Err(err).Msg("Error saving description.lua")
+						}
+					}
+				}
 			}
 		}
 	}
-
-	/*
-		logger.Log.Info().Str("path", relPathDir(dirComp)).Msg("compressing")
-		files, err := archiver.FilesFromDisk(nil, map[string]string{
-			relPathDir(dirComp): "",
-		})
-		if err != nil {
-			logger.Log.Error().Err(err).Str("path", relPathDir(dirComp)).Msg("compressing")
-		}
-
-		out, err := fs.Create("compiled/comp.tar.xz")
-		if err != nil {
-			logger.Log.Error().Err(err).Str("path", relPathDir(dirComp)).Msg("compressing")
-		}
-
-		format := archiver.CompressedArchive{
-			Compression: archiver.Xz{},
-			Archival:    archiver.Tar{},
-		}
-
-		err = format.Archive(context.Background(), out, files)
-		if err != nil {
-			out.Close()
-			logger.Log.Error().Err(err).Str("path", relPathDir(dirComp)).Msg("compressing")
-		}
-		out.Close()
-	*/
-
 }
 
 func copyContents(from afero.File, to afero.File, sourceFolder string) {

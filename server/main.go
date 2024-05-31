@@ -21,7 +21,8 @@ func main() {
 
 	//updateSkins()
 
-	compileSkins()
+	compileSkins(enabled)
+	compileSkins(disabled)
 
 	serveAlastor()
 
