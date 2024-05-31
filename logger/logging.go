@@ -13,7 +13,6 @@ var (
 )
 
 func init() {
-	InitializeLoggerOnce()
 }
 
 func SetLevel(lvl string) error {
@@ -30,6 +29,28 @@ func InitializeLoggerOnce() {
 	logInitOnce.Do(func() {
 		//prep logger
 		logOut := ConsoleWriter{Out: os.Stdout, TimeFormat: time.TimeOnly}
+		Log = New(logOut).With().Caller().Timestamp().Logger()
+		Log.Debug().Msg("INIT: Initializing logger.Log.")
+	})
+}
+
+func InitializeLoggerOnceToFile(name string) {
+	logInitOnce.Do(func() {
+
+		err := os.Remove(name)
+		if err != nil {
+			//nop
+		}
+
+		runLogFile, _ := os.OpenFile(
+			name,
+			os.O_APPEND|os.O_CREATE|os.O_WRONLY,
+			0664,
+		)
+		multi := MultiLevelWriter(os.Stdout, runLogFile)
+
+		//prep logger
+		logOut := ConsoleWriter{Out: multi, TimeFormat: time.TimeOnly}
 		Log = New(logOut).With().Caller().Timestamp().Logger()
 		Log.Debug().Msg("INIT: Initializing logger.Log.")
 	})
