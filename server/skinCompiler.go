@@ -96,7 +96,7 @@ func compileSkins() {
 				//prepare folder
 				compPersDir := dirComp + "/" + acft + "/" + bSkin.Name.AddPers(pSkin.Name)
 				logger.Log.Trace().Str("personal", compPersDir).Msg("Creating Skin")
-				err := fs.MkdirAll(compPersDir, 0666)
+				err := fs.MkdirAll(compPersDir, 0777)
 				if err != nil {
 					logger.Log.Error().Str("name", string(pSkin.Name)).Err(err).Msg("Error creating directory")
 				}
@@ -132,30 +132,32 @@ func compileSkins() {
 		}
 	}
 
-	logger.Log.Info().Str("path", relPathDir(dirComp)).Msg("compressing")
-	files, err := archiver.FilesFromDisk(nil, map[string]string{
-		relPathDir(dirComp): "",
-	})
-	if err != nil {
-		logger.Log.Error().Err(err).Str("path", relPathDir(dirComp)).Msg("compressing")
-	}
+	/*
+		logger.Log.Info().Str("path", relPathDir(dirComp)).Msg("compressing")
+		files, err := archiver.FilesFromDisk(nil, map[string]string{
+			relPathDir(dirComp): "",
+		})
+		if err != nil {
+			logger.Log.Error().Err(err).Str("path", relPathDir(dirComp)).Msg("compressing")
+		}
 
-	out, err := fs.Create("compiled/comp.tar.xz")
-	if err != nil {
-		logger.Log.Error().Err(err).Str("path", relPathDir(dirComp)).Msg("compressing")
-	}
+		out, err := fs.Create("compiled/comp.tar.xz")
+		if err != nil {
+			logger.Log.Error().Err(err).Str("path", relPathDir(dirComp)).Msg("compressing")
+		}
 
-	format := archiver.CompressedArchive{
-		Compression: archiver.Xz{},
-		Archival:    archiver.Tar{},
-	}
+		format := archiver.CompressedArchive{
+			Compression: archiver.Xz{},
+			Archival:    archiver.Tar{},
+		}
 
-	err = format.Archive(context.Background(), out, files)
-	if err != nil {
+		err = format.Archive(context.Background(), out, files)
+		if err != nil {
+			out.Close()
+			logger.Log.Error().Err(err).Str("path", relPathDir(dirComp)).Msg("compressing")
+		}
 		out.Close()
-		logger.Log.Error().Err(err).Str("path", relPathDir(dirComp)).Msg("compressing")
-	}
-	out.Close()
+	*/
 
 }
 

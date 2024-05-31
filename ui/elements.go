@@ -74,7 +74,7 @@ func initSyncPage() *fyne.Container {
 	})
 	persSize.SetSelectedIndex(0)
 
-	syncButton = widget.NewButtonWithIcon("SYNCHRONIZE", theme.ViewRefreshIcon(), sync)
+	syncButton = widget.NewButtonWithIcon("SYNCHRONIZE", theme.ViewRefreshIcon(), doSync)
 
 	statusMajor = widget.NewProgressBar()
 	statusMajor.TextFormatter = func() string {

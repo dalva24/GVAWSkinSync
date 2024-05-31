@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+var maxServants = 30
+
 type FlameWeaver struct {
 	AuthCode        string
 	AddressPort     string
@@ -101,8 +103,8 @@ func (f *FlameWeaver) Weave() error {
 	}
 
 	f.numOfServants = int(info.Info[0].FileSize / int64(f.ChunkSize))
-	if f.numOfServants > 20 {
-		f.numOfServants = 20
+	if f.numOfServants > maxServants {
+		f.numOfServants = maxServants
 	} else if f.numOfServants < 1 {
 		f.numOfServants = 1
 	}

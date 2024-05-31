@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"errors"
 	"github.com/spf13/afero"
 	alastor "net.dalva.GvawSkinSync/Alastor"
 	"net.dalva.GvawSkinSync/logger"
@@ -9,16 +10,24 @@ import (
 	"syscall"
 )
 
-var chunkSize = 1024 * 1024
+var chunkSize = 512 * 1024
 
 var aircrafts []string
 
 func skinSync() {
+
+	if !checkExist("7za.exe") {
+		ShowInfo("7za.exe Does Not Exist", "Make sure you extract 7za.exe alongside SkinSync.exe. 7za.exe is 7zip binaries for extracting downloaded skins.")
+		EnableInputs()
+		return
+	}
+
 	logger.Log.Info().Msg("Basedir Prep")
 	baseDir := fullPath(".")
 	err := os.MkdirAll(baseDir, 0666)
 	if err != nil {
 		ShowInfo("Error", "Cannot make "+baseDir)
+		EnableInputs()
 		return
 	}
 	var fs = afero.NewBasePathFs(afero.NewOsFs(), baseDir)
@@ -43,6 +52,14 @@ func skinSync() {
 	}
 
 	UpdateStatusMajor("Done", 4, 0, 0)
+	ShowInfo("Done", "Skin sync done, you can close this app and run DCS as usual.")
+}
+
+func checkExist(path string) bool {
+	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+		return false
+	}
+	return true
 }
 
 func download(fs afero.Fs, fname string, source string, dest string, shownName string) {
@@ -146,7 +163,7 @@ func downloadPersonalSkins(fs afero.Fs) {
 			return
 		}
 		for j, skin := range skins {
-			UpdateStatusMajor("DL User Skin "+acft, 2, float64(i)/float64(len(aircrafts)), float64(j)/float64(len(skins)))
+			UpdateStatusMajor("DL User Skin "+acft, 3, float64(i)/float64(len(aircrafts)), float64(j)/float64(len(skins)))
 			download(fs, "textures.7z",
 				serverSkinPath(pers, full, acft, skin),
 				clientPersonalSkinPath(acft, skin),

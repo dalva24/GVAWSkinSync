@@ -76,7 +76,7 @@ func (f *FlameServant) Runtime(supervisor *FlameWeaver) {
 
 func (f *FlameServant) downloadChunk(dq *DataQuery) ([]byte, error) {
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*8)
 	defer cancel()
 	data, err := f.c.GetFileData(ctx, dq)
 	if err != nil {

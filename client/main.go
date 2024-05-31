@@ -2,6 +2,9 @@ package main
 
 //go:generate protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative --proto_path=.. Alastor/alastor.proto
 
+// for build:
+// fyne package --release -os windows -icon ../gvaw-sq-16.png --appID net.dalva.GvawSkinSync
+
 import (
 	"net.dalva.GvawSkinSync/logger"
 	"net.dalva.GvawSkinSync/ui"

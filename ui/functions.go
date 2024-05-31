@@ -97,7 +97,7 @@ func browseDcs() {
 	savedGamesDir.Refresh()
 }
 
-func sync() {
+func doSync() {
 
 	DisableInputs()
 
@@ -125,12 +125,16 @@ func sync() {
 	}
 	logger.Log.Info().Str("addressPort", addressPort).Msg("Connection OK")
 
-	skinSync()
+	ShowConfirm("PASTIKAN!", "Liveries GVAW yang dipasang sebelum implementasi SkinSync, yang saat ini mungkin berada di folder SavedGames-DCS/Liveries sudah dihapus/dipindahkan sebelum menggunakan SkinSync. Jika tidak dihapus berpotensi konflik atau adanya skin duplikat. Perlu dicatat, saat ini SkinSync hanya akan men-sinkronisasi custom skin GVAW untuk F-16.",
+		func() {
+			ShowConfirm("PASTIKAN JUGA!", "Saat ini, SkinSync tidak memiliki kapabilitas delta-download, jadi setiap SYNC akan men-download seluruh skin dari server. Oke?",
+				func() {
+					skinSync()
+				})
+		})
 
 	statusMinor.TextFormatter = nil
 	statusMinor.Refresh()
-
-	EnableInputs()
 
 }
 
@@ -149,6 +153,18 @@ func ShowUI() {
 func ShowInfo(title string, content string) {
 	wrapped := wordWrap(content, 45)
 	dialog.ShowInformation(title, wrapped, window)
+}
+
+func ShowConfirm(title string, content string, callback func()) {
+	wrapped := wordWrap(content, 45)
+	dialog.ShowConfirm(title, wrapped, func(b bool) {
+		if b {
+			callback()
+		} else {
+			ShowInfo("Cancelled", "Synchronization Cancelled.")
+			EnableInputs()
+		}
+	}, window)
 }
 
 // exists returns whether the given file or directory exists

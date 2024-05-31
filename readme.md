@@ -20,7 +20,7 @@ Please report any issues in the issues page!
 3. Enter your Authentication code as distributed in secure channels.
 4. Choose your required skin resolutions (NOTE: currently this feature is INOP, as it is under development)
 5. Choose whether to enable or disable personal skins
-6. "Saved Games Dir" is automagically detected, ensure it is correct.
+6. "Saved Games Dir" is automagically detected, ensure it is correct. Normally C:\Users\<yourname>\Saved Games\DCS\
 7. "Sync Server" should be gvaw.web.id unless otherwise noted
 8. Click SYNCHRONIZE and sit back, relax.
 9. Once the status shows "DONE 100%", you can close the program and start DCS as usual.
