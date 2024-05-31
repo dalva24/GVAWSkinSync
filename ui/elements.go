@@ -31,10 +31,6 @@ var (
 
 var addressPort string
 
-func init() {
-	pStatus = statusIdle
-}
-
 func initElements() *container.AppTabs {
 
 	elements := container.NewAppTabs(
@@ -82,24 +78,12 @@ func initSyncPage() *fyne.Container {
 
 	statusMajor = widget.NewProgressBar()
 	statusMajor.TextFormatter = func() string {
-		switch pStatus {
-		case statusConnected:
-			return "Connected"
-		case statusSyncing:
-			return "Syncing"
-		default:
-			return "Idle"
-		}
+		return "Standing by..."
 	}
 
 	statusMinor = widget.NewProgressBar()
 	statusMinor.TextFormatter = func() string {
-		switch pStatus {
-		case statusSyncing:
-			return "Syncing"
-		default:
-			return ""
-		}
+		return ""
 	}
 
 	return container.New(layout.NewVBoxLayout(),

@@ -90,10 +90,11 @@ func compileSkins() {
 		logger.Log.Info().Str("acft", acft).Msg("Processing Personalized Skins")
 		personalSkins := data.ListSubDirs("personal_full/"+acft, fs)
 		for _, bSkin := range baseSkins {
+			//todo check if base skin allows customization
 			for _, pSkin := range personalSkins {
 
 				//prepare folder
-				compPersDir := dirComp + "/" + bSkin.Name.AddPers(pSkin.Name)
+				compPersDir := dirComp + "/" + acft + "/" + bSkin.Name.AddPers(pSkin.Name)
 				logger.Log.Trace().Str("personal", compPersDir).Msg("Creating Skin")
 				err := fs.MkdirAll(compPersDir, 0666)
 				if err != nil {

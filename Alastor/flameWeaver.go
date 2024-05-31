@@ -3,6 +3,8 @@ package alastor
 import (
 	"context"
 	"errors"
+	"fmt"
+	"fyne.io/fyne/v2/widget"
 	"github.com/spf13/afero"
 	"net.dalva.GvawSkinSync/logger"
 	"sync"
@@ -10,21 +12,37 @@ import (
 )
 
 type FlameWeaver struct {
-	AuthCode      string
-	AddressPort   string
-	FileName      string
-	ChunkSize     int
-	Destination   *afero.File
-	numOfServants int
-	dqs           []ChunkTracker
-	nextDq        int
-	servants      []FlameServant
-	awaiter       sync.WaitGroup
-	mu            sync.Mutex
+	AuthCode        string
+	AddressPort     string
+	FileName        string
+	StatusShownName string
+	ChunkSize       int
+	Destination     *afero.File
+	StatusMinor     *widget.ProgressBar
+	chunksTotal     int64
+	chunksDone      int64
+	numOfServants   int
+	dqs             []ChunkTracker
+	nextDq          int
+	servants        []FlameServant
+	awaiter         sync.WaitGroup
+	mu              sync.Mutex
+}
+
+func (f *FlameWeaver) getPercentageDone() float64 {
+	return float64(f.chunksDone) / float64(f.chunksTotal)
 }
 
 func (f *FlameWeaver) notifyServantActive() {
 	f.awaiter.Add(1)
+}
+
+func (f *FlameWeaver) notifyChunkDone() {
+	f.mu.Lock()
+	f.chunksDone++
+	f.StatusMinor.SetValue(f.getPercentageDone())
+	f.StatusMinor.Refresh()
+	f.mu.Unlock()
 }
 
 func (f *FlameWeaver) getNextDQ() (*ChunkTracker, error) {
@@ -91,13 +109,21 @@ func (f *FlameWeaver) Weave() error {
 
 	logger.Log.Trace().Str("filename", f.FileName).Msg("Weaving start")
 
-	chunks := info.Info[0].FileSize / int64(f.ChunkSize)
+	f.chunksTotal = info.Info[0].FileSize / int64(f.ChunkSize)
 	remaining := info.Info[0].FileSize % int64(f.ChunkSize)
 	if remaining > 0 {
-		chunks++
+		f.chunksTotal++
 	}
+	fileSizeKB := float64(info.Info[0].FileSize) / 1024.0 / 1024.0
+	statusInfo := fmt.Sprintf("%s | %.2f MB", f.StatusShownName, fileSizeKB)
 
-	for i := range chunks {
+	f.StatusMinor.SetValue(0)
+	f.StatusMinor.TextFormatter = func() string {
+		return statusInfo
+	}
+	f.StatusMinor.Refresh()
+
+	for i := range f.chunksTotal {
 		f.dqs = append(f.dqs, ChunkTracker{
 			dq: DataQuery{
 				ApiKey:            f.AuthCode,

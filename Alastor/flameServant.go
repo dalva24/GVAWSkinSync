@@ -69,8 +69,8 @@ func (f *FlameServant) Runtime(supervisor *FlameWeaver) {
 				break
 			}
 		}
+		supervisor.notifyChunkDone()
 	}
-
 	supervisor.notifyServantDead()
 }
 

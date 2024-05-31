@@ -37,8 +37,34 @@ func RefreshStatus() {
 	statusMinor.Refresh()
 }
 
-func UpdateStatus(status string) {
+func UpdateStatusMajor(status string, phase int, progressMajor float64, progressMinor float64) {
 
+	progress := progressMajor + (progressMinor * 0.1)
+
+	// phases:
+	// 0 = 0 Waiting
+	// 1 = 0.1 Connected
+	// 2 = 0.1..0.6 Downloading all aircraft skins
+	// 3 = 0.6..0.9 Downloading user skins
+	// 4 = 1.0 Done
+	value := 0.00
+	switch phase {
+	case 0:
+		value = 0
+	case 1:
+		value = 0.1
+	case 2:
+		value = 0.1 + (progress / 2.0)
+	case 3:
+		value = 0.6 + (progress / 3.0)
+	case 4:
+		value = 1.0
+	}
+	statusMajor.SetValue(value)
+	statusMajor.TextFormatter = func() string {
+		return status
+	}
+	statusMajor.Refresh()
 }
 
 func browseDcs() {
@@ -99,10 +125,10 @@ func sync() {
 	}
 	logger.Log.Info().Str("addressPort", addressPort).Msg("Connection OK")
 
-	pStatus = statusConnected
-	RefreshStatus()
-
 	skinSync()
+
+	statusMinor.TextFormatter = nil
+	statusMinor.Refresh()
 
 	EnableInputs()
 
@@ -111,12 +137,13 @@ func sync() {
 func ShowUI() {
 	fyneApp = app.New()
 	window = fyneApp.NewWindow("GVAW SkinSync by Dalva")
-	window.Resize(fyne.NewSize(400, 600))
+	window.Resize(fyne.NewSize(500, 600))
 	window.SetFixedSize(true)
 	fyneApp.Settings().SetTheme(theme.DarkTheme())
 	window.SetContent(initElements())
 	browseDcs()
 	window.ShowAndRun()
+	UpdateStatusMajor("Standing by...", 0, 0, 0)
 }
 
 func ShowInfo(title string, content string) {
