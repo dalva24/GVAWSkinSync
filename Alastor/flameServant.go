@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/spf13/afero"
 	"net.dalva.GvawSkinSync/checksum"
+	"net.dalva.GvawSkinSync/logger"
 	"net.dalva.GvawSkinSync/ssErrors"
 	"time"
 )
@@ -15,11 +16,25 @@ type ChunkTracker struct {
 }
 
 type FlameServant struct {
-	c AlastorClient
+	addressPort string
+	c           AlastorClient
 }
 
 func (f *FlameServant) Run(supervisor *FlameWeaver) {
 	supervisor.notifyServantActive()
+	go f.Runtime(supervisor)
+}
+
+func (f *FlameServant) Runtime(supervisor *FlameWeaver) {
+
+	con, err := newConnection(f.addressPort)
+	if err != nil {
+		supervisor.notifyServantDead()
+		logger.Log.Error().Err(err).Msg("Servant creation error")
+		return
+	}
+	defer con.Close()
+	f.c = NewAlastorClient(con)
 
 	for {
 		next, err := supervisor.getNextDQ()
@@ -33,7 +48,10 @@ func (f *FlameServant) Run(supervisor *FlameWeaver) {
 		for {
 			var err error
 			chunk, err = f.downloadChunk(&next.dq)
-			if err == nil {
+			if err != nil {
+				logger.Log.Error().Err(err).Int64("chunk", next.dq.ChunkOffset).Msg("Error downloading chunk")
+			} else {
+				//done downloading
 				break
 			}
 		}
@@ -44,7 +62,10 @@ func (f *FlameServant) Run(supervisor *FlameWeaver) {
 		for {
 			var err error
 			err = f.saveChunk(chunk, next.dest, offset)
-			if err == nil {
+			if err != nil {
+				logger.Log.Error().Err(err).Int64("chunk", next.dq.ChunkOffset).Msg("Error saving chunk")
+			} else {
+				//done downloading
 				break
 			}
 		}

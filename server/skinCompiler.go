@@ -2,6 +2,8 @@ package main
 
 import (
 	"bufio"
+	"context"
+	"github.com/mholt/archiver/v4"
 	"net.dalva.GvawSkinSync/data"
 	"net.dalva.GvawSkinSync/logger"
 	"strings"
@@ -10,27 +12,73 @@ import "github.com/spf13/afero"
 
 var fs = afero.NewBasePathFs(afero.NewOsFs(), "./server-data/")
 
+func relPathDir(path string) string {
+	return ".\\server-data\\" + path + "\\"
+}
+
 var (
-	dirComp = data.Mixdir("compiled")
+	dirComp = "compiled"
 	dirBase = data.Mixdir("base")
 	dirPers = data.Mixdir("personal")
 	resFull = data.Mixdir("full")
 	resHalf = data.Mixdir("half")
 )
 
-func compileSkins() {
+func sanityCheck() {
 	logger.Log.Debug().
-		Bool("descriptor.zip", checkExist("descriptor.zip", true)).
+		Bool("descriptor.7z", checkExist("descriptor.7z", true)).
 		Bool("aircraft.txt", checkExist("aircraft.txt", true)).
 		Bool("base_full", checkExist(dirBase.Add(resFull), true)).
 		Bool("personal_full", checkExist(dirPers.Add(resFull), true)).
 		Msg("Checking Sanity...")
+}
 
-	err := fs.RemoveAll(dirComp.Add(resFull))
-	if err != nil {
-		logger.Log.Err(err).Msg("Failed to remove old files")
+// updateSkins are unused and are
+// Deprecated: currently unused since archiving is just too slow
+func updateSkins() {
+	sanityCheck()
+	aircraft := data.LoadLines("aircraft.txt", fs)
+
+	for _, acft := range aircraft {
+		baseSkins := data.ListSubDirs("base_full/"+acft, fs)
+		logger.Log.Info().Str("acft", acft).Msg("Updating Aircraft")
+		for _, bSkin := range baseSkins {
+			if checkExist(bSkin.FullDirName, false) {
+				logger.Log.Info().Str("bSkin", relPathDir(bSkin.FullDirName)).Msg("Updating Skin")
+				files, err := archiver.FilesFromDisk(nil, map[string]string{
+					relPathDir(bSkin.FullDirName): "",
+				})
+				if err != nil {
+					logger.Log.Error().Err(err).Str("bSkin", relPathDir(bSkin.FullDirName)).Msg("Updating Skin")
+				}
+
+				out, err := fs.Create("base_full/" + acft + ".tar.xz")
+				if err != nil {
+					logger.Log.Error().Err(err).Str("bSkin", relPathDir(bSkin.FullDirName)).Msg("Updating Skin")
+				}
+
+				format := archiver.CompressedArchive{
+					Compression: archiver.Xz{},
+					Archival:    archiver.Tar{},
+				}
+
+				err = format.Archive(context.Background(), out, files)
+				if err != nil {
+					out.Close()
+					logger.Log.Error().Err(err).Str("bSkin", relPathDir(bSkin.FullDirName)).Msg("Updating Skin")
+				}
+				out.Close()
+			} else {
+				break
+			}
+		}
 	}
-	err = fs.RemoveAll(dirComp.Add(resHalf))
+}
+
+func compileSkins() {
+	sanityCheck()
+
+	err := fs.RemoveAll(dirComp)
 	if err != nil {
 		logger.Log.Err(err).Msg("Failed to remove old files")
 	}
@@ -45,9 +93,9 @@ func compileSkins() {
 			for _, pSkin := range personalSkins {
 
 				//prepare folder
-				compPersDir := dirComp.Add(resFull) + "/" + bSkin.Name.AddPers(pSkin.Name)
+				compPersDir := dirComp + "/" + bSkin.Name.AddPers(pSkin.Name)
 				logger.Log.Trace().Str("personal", compPersDir).Msg("Creating Skin")
-				err := fs.MkdirAll(dirComp.Add(resFull)+"/"+bSkin.Name.AddPers(pSkin.Name), 0666)
+				err := fs.MkdirAll(compPersDir, 0666)
 				if err != nil {
 					logger.Log.Error().Str("name", string(pSkin.Name)).Err(err).Msg("Error creating directory")
 				}
@@ -82,6 +130,31 @@ func compileSkins() {
 			}
 		}
 	}
+
+	logger.Log.Info().Str("path", relPathDir(dirComp)).Msg("compressing")
+	files, err := archiver.FilesFromDisk(nil, map[string]string{
+		relPathDir(dirComp): "",
+	})
+	if err != nil {
+		logger.Log.Error().Err(err).Str("path", relPathDir(dirComp)).Msg("compressing")
+	}
+
+	out, err := fs.Create("compiled/comp.tar.xz")
+	if err != nil {
+		logger.Log.Error().Err(err).Str("path", relPathDir(dirComp)).Msg("compressing")
+	}
+
+	format := archiver.CompressedArchive{
+		Compression: archiver.Xz{},
+		Archival:    archiver.Tar{},
+	}
+
+	err = format.Archive(context.Background(), out, files)
+	if err != nil {
+		out.Close()
+		logger.Log.Error().Err(err).Str("path", relPathDir(dirComp)).Msg("compressing")
+	}
+	out.Close()
 
 }
 

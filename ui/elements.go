@@ -11,7 +11,7 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"image/color"
-	"log"
+	"net.dalva.GvawSkinSync/logger"
 )
 
 var (
@@ -66,15 +66,15 @@ func initSyncPage() *fyne.Container {
 	savedGamesDir.Resize(fyne.NewSize(90, 0))
 
 	persSkin = widget.NewCheck("Enable", func(value bool) {
-		log.Println("persSkin set to", value)
+		logger.Log.Info().Bool("persSkin", value).Msg("changed setting")
 	})
 	persSkin.SetChecked(true)
 	skinSize = widget.NewSelect([]string{"Full", "Half", "Quarter"}, func(value string) {
-		log.Println("skinSize set to", value)
+		logger.Log.Info().Str("skinSize", value).Msg("changed setting")
 	})
 	skinSize.SetSelectedIndex(0)
 	persSize = widget.NewSelect([]string{"Full", "Half", "Quarter"}, func(value string) {
-		log.Println("persSize set to", value)
+		logger.Log.Info().Str("persSize", value).Msg("changed setting")
 	})
 	persSize.SetSelectedIndex(0)
 
@@ -140,7 +140,7 @@ func initSyncPage() *fyne.Container {
 }
 
 func initHelpPage() *fyne.Container {
-	about := widget.NewLabel("GVAW SkinSync v1.00")
+	about := widget.NewLabel("GVAW SkinSync v0.1")
 	t0 := widget.NewLabel("This open source software is created by Dalva.\nLicensed under GNU Affero-GPLv3.0.\nSource at https://github.com/dalva24/GVAWSkinSync")
 	t01 := widget.NewLabel("Powered by modified Alastor massively concurrent\nfile transfer algorithm to ensure peak maximum\nspeed even in Ind*hom* conditions.\nReference source at https://github.com/dalva24/alastor")
 	t1 := widget.NewLabel("Auth Code is like IFF Code, renewed daily.\nAsk around to obtain it.")

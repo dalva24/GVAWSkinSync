@@ -18,7 +18,7 @@ func scheduleRefreshAuthCode() {
 
 	start, err := time.Parse(
 		"2006-01-02 15:04:05",
-		"2019-09-17 04:00:00",
+		"2019-09-17 21:00:00",
 	) // is a tuesday
 	if err != nil {
 		panic(err)

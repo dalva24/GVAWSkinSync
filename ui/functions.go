@@ -5,8 +5,8 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
-	"log"
 	"net.dalva.GvawSkinSync/Alastor"
+	"net.dalva.GvawSkinSync/logger"
 	"os"
 	"os/user"
 	"strings"
@@ -44,7 +44,7 @@ func UpdateStatus(status string) {
 func browseDcs() {
 	userObj, err := user.Current()
 	if err != nil {
-		log.Fatal(err)
+		logger.Log.Fatal().Err(err).Msg("Fatal: Cannot get current user")
 	}
 
 	// test multiple possible combinations
@@ -69,21 +69,17 @@ func browseDcs() {
 
 	savedGamesDir.Text = dcsDir
 	savedGamesDir.Refresh()
-	/*
-		w := fyneApp.NewWindow("Add File")
-		d := dialog.NewFileOpen(func(uc fyne.URIReadCloser, err error) {
-			time.Sleep(time.Second) // this is a workaround for the second panic
-			w.Close()
-		}, w)
-		d.Show()
-		w.Resize(fyne.NewSize(1000, 500))
-		w.Show()
-	*/
 }
 
 func sync() {
 
 	DisableInputs()
+
+	if persSize.Selected != "Full" || skinSize.Selected != "Full" {
+		ShowInfo("Unimplemented", "Sorry, skin sizes other than Full is currently not yet implemented.")
+		EnableInputs()
+		return
+	}
 
 	addressPort = "gvaw.web.id:24003"
 	if len(strings.Split(syncServer.Text, ":")) == 2 {
@@ -92,15 +88,16 @@ func sync() {
 		addressPort = syncServer.Text + ":24003"
 	}
 
-	log.Println("SYNC" + addressPort)
+	logger.Log.Info().Str("addressPort", addressPort).Msg("SYNC")
 
 	err := alastor.TestConnection(addressPort, authCode.Text)
 	if err != nil {
 		ShowInfo(err.Title, err.Err)
+		logger.Log.Error().Err(err).Msg("Connection Error")
 		EnableInputs()
+		return
 	}
-
-	log.Println("Conn OK" + addressPort)
+	logger.Log.Info().Str("addressPort", addressPort).Msg("Connection OK")
 
 	pStatus = statusConnected
 	RefreshStatus()

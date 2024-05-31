@@ -19,6 +19,8 @@ func main() {
 
 	go scheduleRefreshAuthCode()
 
+	//updateSkins()
+
 	compileSkins()
 
 	serveAlastor()
