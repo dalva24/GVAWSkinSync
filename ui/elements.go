@@ -124,7 +124,7 @@ func initSyncPage() *fyne.Container {
 }
 
 func initHelpPage() *fyne.Container {
-	about := widget.NewLabel("GVAW SkinSync v0.1")
+	about := widget.NewLabel("GVAW SkinSync v0.3")
 	t0 := widget.NewLabel("This open source software is created by Dalva.\nLicensed under GNU Affero-GPLv3.0.\nSource at https://github.com/dalva24/GVAWSkinSync")
 	t01 := widget.NewLabel("Powered by modified Alastor massively concurrent\nfile transfer algorithm to ensure peak maximum\nspeed even in Ind*hom* conditions.\nReference source at https://github.com/dalva24/alastor")
 	t1 := widget.NewLabel("Auth Code is like IFF Code, renewed daily.\nAsk around to obtain it.")

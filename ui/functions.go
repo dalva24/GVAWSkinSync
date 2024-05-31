@@ -141,7 +141,7 @@ func doSync() {
 func ShowUI() {
 	fyneApp = app.New()
 	window = fyneApp.NewWindow("GVAW SkinSync by Dalva")
-	window.Resize(fyne.NewSize(500, 600))
+	window.Resize(fyne.NewSize(700, 550))
 	window.SetFixedSize(true)
 	fyneApp.Settings().SetTheme(theme.DarkTheme())
 	window.SetContent(initElements())

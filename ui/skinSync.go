@@ -2,17 +2,19 @@ package ui
 
 import (
 	"errors"
+	"fmt"
 	"github.com/spf13/afero"
 	alastor "net.dalva.GvawSkinSync/Alastor"
 	"net.dalva.GvawSkinSync/logger"
 	"os"
 	"os/exec"
+	"strconv"
 	"syscall"
 )
 
 var chunkSize = 512 * 1024
 
-var aircrafts []string
+var aircrafts []*alastor.File
 
 func skinSync() {
 
@@ -38,18 +40,16 @@ func skinSync() {
 
 	extractAndCreateFiles("descriptor.7z", fs, true, ".")
 
-	err = fs.RemoveAll("Liveries")
+	/*err = fs.RemoveAll("Liveries")
 	if err != nil {
 		ShowInfo("Error", "Cannot scrub old skin "+err.Error())
 		logger.Log.Error().Err(err).Msg("Cannot scrub old skin")
 		return
-	}
+	}*/
 
 	downloadAircrafts(fs)
 
-	if persSkin.Checked {
-		downloadPersonalSkins(fs)
-	}
+	downloadPersonalSkins(fs, persSkin.Checked)
 
 	UpdateStatusMajor("Done", 4, 0, 0)
 	ShowInfo("Done", "Skin sync done, you can close this app and run DCS as usual.")
@@ -95,10 +95,43 @@ func download(fs afero.Fs, fname string, source string, dest string, shownName s
 	f.Close()
 }
 
+func addMetadata(metaFile string, fs afero.Fs, timestamp int64) {
+	f, err := fs.Create(metaFile)
+	if err != nil {
+		logger.Log.Error().Err(err).Msg("Create Timestamp")
+		return
+	}
+	ts := fmt.Sprintf("%d", timestamp)
+	_, err = f.WriteString(ts)
+	if err != nil {
+		logger.Log.Error().Err(err).Msg("Create Timestamp")
+		return
+	}
+}
+
+func checkNeedToUpdate(metaFile string, fs afero.Fs, newTs int64) bool {
+	buf, err := afero.ReadFile(fs, metaFile)
+	if err != nil {
+		logger.Log.Error().Err(err).Msg("Read Timestamp")
+		return true
+	}
+	i, err := strconv.ParseInt(string(buf), 10, 64)
+	if err != nil {
+		logger.Log.Error().Err(err).Msg("Read Timestamp")
+		return true
+	}
+	logger.Log.Info().Str("metaFile", metaFile).Int64("new", newTs).Int64("old", i).Msg("Update check")
+	if newTs > i {
+		return true
+	} else {
+		return false
+	}
+}
+
 func extractAndCreateFiles(archiveName string, fs afero.Fs, delArchive bool, extractTo string) {
 	cmd := exec.Command("./7za.exe", "x", fullPath(archiveName), "-y", "-bd", "-o"+fullPath(extractTo))
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = nil
+	cmd.Stderr = nil
 	cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000}
 	err := cmd.Run()
 	if err != nil {
@@ -127,57 +160,72 @@ func downloadAircrafts(fs afero.Fs) {
 		return
 	}
 	for i, acft := range aircrafts {
-		skins, err := alastor.LS(addressPort, authCode.Text, "base_full/"+acft)
+		skins, err := alastor.LS(addressPort, authCode.Text, "base_full/"+acft.FileName)
 		if err != nil {
 			logger.Log.Error().Err(err).Msg("DownloadSkins")
 			ShowInfo("Error", "Cannot Download aircraft skin list")
 			return
 		}
 		for j, skin := range skins {
-			UpdateStatusMajor("Downloading "+acft, 2, float64(i)/float64(len(aircrafts)), float64(j)/float64(len(skins)))
-			download(fs, "description.lua",
-				serverSkinPath(base, full, acft, skin),
-				clientSkinPath(acft, skin),
-				skin,
-			)
-			download(fs, "textures.7z",
-				serverSkinPath(base, full, acft, skin),
-				clientSkinPath(acft, skin),
-				skin,
-			)
-			extractAndCreateFiles(
-				clientSkinPath(acft, skin)+"/textures.7z",
-				fs, true, clientSkinPath(acft, skin))
+			if checkNeedToUpdate(
+				clientSkinPath(acft.FileName, skin.FileName)+"/meta",
+				fs, skin.FileTimestamp,
+			) {
+				UpdateStatusMajor("Downloading "+acft.FileName, 2, float64(i)/float64(len(aircrafts)), float64(j)/float64(len(skins)))
+				download(fs, "description.lua",
+					serverSkinPath(base, full, acft.FileName, skin.FileName),
+					clientSkinPath(acft.FileName, skin.FileName),
+					skin.FileName,
+				)
+				download(fs, "textures.7z",
+					serverSkinPath(base, full, acft.FileName, skin.FileName),
+					clientSkinPath(acft.FileName, skin.FileName),
+					skin.FileName,
+				)
+				extractAndCreateFiles(
+					clientSkinPath(acft.FileName, skin.FileName)+"/textures.7z",
+					fs, true, clientSkinPath(acft.FileName, skin.FileName))
+				addMetadata(
+					clientSkinPath(acft.FileName, skin.FileName)+"/meta",
+					fs, skin.FileTimestamp,
+				)
+			}
 		}
 	}
 }
 
-func downloadPersonalSkins(fs afero.Fs) {
+func downloadPersonalSkins(fs afero.Fs, enabled bool) {
 	logger.Log.Info().Msg("Downloading User Skin Textures")
 	UpdateStatusMajor("Downloading User Skins...", 3, 0, 0)
 	for i, acft := range aircrafts {
-		skins, err := alastor.LS(addressPort, authCode.Text, "personal_full/"+acft)
+		skins, err := alastor.LS(addressPort, authCode.Text, "personal_full/"+acft.FileName)
 		if err != nil {
 			logger.Log.Error().Err(err).Msg("DownloadSkins")
 			ShowInfo("Error", "Cannot Download aircraft personal skin list")
 			return
 		}
 		for j, skin := range skins {
-			UpdateStatusMajor("DL User Skin "+acft, 3, float64(i)/float64(len(aircrafts)), float64(j)/float64(len(skins)))
+			UpdateStatusMajor("DL User Skin "+acft.FileName, 3, float64(i)/float64(len(aircrafts)), float64(j)/float64(len(skins)))
 			download(fs, "textures.7z",
-				serverSkinPath(pers, full, acft, skin),
-				clientPersonalSkinPath(acft, skin),
-				skin,
+				serverSkinPath(pers, full, acft.FileName, skin.FileName),
+				clientPersonalSkinPath(acft.FileName, skin.FileName),
+				skin.FileName,
 			)
 			extractAndCreateFiles(
-				clientPersonalSkinPath(acft, skin)+"/textures.7z",
-				fs, true, clientPersonalSkinPath(acft, skin))
+				clientPersonalSkinPath(acft.FileName, skin.FileName)+"/textures.7z",
+				fs, true, clientPersonalSkinPath(acft.FileName, skin.FileName))
 		}
 	}
 	logger.Log.Info().Msg("Downloading User Skin Descriptor")
 	UpdateStatusMajor("Downloading User Skin Descriptor...", 3, 0, 0)
+	compPath := ""
+	if enabled {
+		compPath = "compiled_on/"
+	} else {
+		compPath = "compiled_off/"
+	}
 	for _, acft := range aircrafts {
-		skins, err := alastor.LS(addressPort, authCode.Text, "compiled/"+acft)
+		skins, err := alastor.LS(addressPort, authCode.Text, compPath+acft.FileName)
 		if err != nil {
 			logger.Log.Error().Err(err).Msg("DownloadSkins")
 			ShowInfo("Error", "Cannot Download aircraft personal skin list")
@@ -185,9 +233,9 @@ func downloadPersonalSkins(fs afero.Fs) {
 		}
 		for _, skin := range skins {
 			download(fs, "description.lua",
-				serverCompiledSkinPath(acft, skin),
-				clientSkinPath(acft, skin),
-				skin,
+				serverCompiledSkinPath(enabled, acft.FileName, skin.FileName),
+				clientSkinPath(acft.FileName, skin.FileName),
+				skin.FileName,
 			)
 		}
 	}
@@ -202,8 +250,12 @@ func serverSkinPath(kind string, res string, aircraft string, skin string) strin
 	return kind + "_" + res + "/" + aircraft + "/" + skin
 }
 
-func serverCompiledSkinPath(aircraft string, skin string) string {
-	return "compiled/" + aircraft + "/" + skin
+func serverCompiledSkinPath(enabled bool, aircraft string, skin string) string {
+	if enabled {
+		return "compiled_on/" + aircraft + "/" + skin
+	} else {
+		return "compiled_off/" + aircraft + "/" + skin
+	}
 }
 
 func clientSkinPath(aircraft string, skin string) string {

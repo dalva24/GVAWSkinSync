@@ -152,7 +152,7 @@ func (f *FlameWeaver) Weave() error {
 
 }
 
-func LS(addressPort string, apiKey string, fName string) ([]string, error) {
+func LS(addressPort string, apiKey string, fName string) ([]*File, error) {
 
 	q := &FileQuery{
 		ApiKey:            apiKey,
@@ -177,9 +177,9 @@ func LS(addressPort string, apiKey string, fName string) ([]string, error) {
 		return nil, errors.New(info.Error.Msg)
 	}
 	if info.IsDirectory {
-		var retval []string
+		var retval []*File
 		for _, file := range info.Info {
-			retval = append(retval, file.FileName)
+			retval = append(retval, file)
 		}
 		return retval, nil
 	}
